@@ -15,6 +15,7 @@ namespace CodeIgniter\Shield\Entities;
 
 use CodeIgniter\Entity\Entity as FrameworkEntity;
 use CodeIgniter\Shield\Entities\Cast\IntBoolCast;
+use App\Entities\Cast\UuidCast;
 
 /**
  * Base Entity
@@ -29,5 +30,6 @@ abstract class Entity extends FrameworkEntity
      */
     protected $castHandlers = [
         'int_bool' => IntBoolCast::class,
+        'uuid' => UuidCast::class,
     ];
 }

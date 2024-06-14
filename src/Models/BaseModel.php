@@ -15,6 +15,7 @@ namespace CodeIgniter\Shield\Models;
 
 use CodeIgniter\Model;
 use CodeIgniter\Shield\Config\Auth;
+use Ramsey\Uuid\Uuid;
 
 abstract class BaseModel extends Model
 {
@@ -24,6 +25,8 @@ abstract class BaseModel extends Model
      * Auth Table names
      */
     protected array $tables;
+    protected $useAutoIncrement = false;
+    protected $beforeInsert = ['setPrimaryKey'];
 
     protected Auth $authConfig;
 
@@ -41,5 +44,31 @@ abstract class BaseModel extends Model
     protected function initialize(): void
     {
         $this->tables = $this->authConfig->tables;
+    }
+
+    protected function setPrimaryKey(array|object $data)
+    {
+        $newUuid = Uuid::uuid4()->toString();
+
+        if (is_object($data)) {
+            if ($data->data->{$this->primaryKey} == '')
+            {
+                $data->data->{$this->primaryKey} == $newUuid;
+            }
+        } else {
+            if ($this->useAutoIncrement == false && !isset($data['data'][$this->primaryKey])) {
+                $data['data'][$this->primaryKey] = $newUuid;
+            }
+        }
+
+        return $data;
+    }
+
+    protected function getLastId()
+    {
+        $builder = $this->db->table($this->table);
+        $lastRow = $builder->select($this->primaryKey)->orderBy($this->createdField, 'DESC')->limit(1)->get()->getRow();
+
+        return $lastRow->id;
     }
 }

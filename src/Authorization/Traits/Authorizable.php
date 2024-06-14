@@ -387,14 +387,16 @@ trait Authorizable
             $inserts = [];
 
             foreach ($new as $item) {
-                $inserts[] = [
+                $inserts = [
                     'user_id'    => $this->id,
                     $type        => $item,
                     'created_at' => Time::now(),
                 ];
+
+                $model->insert($inserts);
             }
 
-            $model->insertBatch($inserts);
+            // $model->insertBatch($inserts);
         }
     }
 

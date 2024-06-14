@@ -69,6 +69,8 @@ class LoginController extends BaseController
 
         // Attempt to login
         $result = $authenticator->remember($remember)->attempt($credentials);
+
+
         if (! $result->isOK()) {
             return redirect()->route('login')->withInput()->with('error', $result->reason());
         }
