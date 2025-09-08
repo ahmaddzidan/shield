@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Commands;
 
+use CodeIgniter\I18n\Time;
 use CodeIgniter\Shield\Authentication\HMAC\HmacEncrypter;
 use CodeIgniter\Shield\Commands\Hmac;
 use CodeIgniter\Shield\Config\AuthToken;
@@ -139,6 +140,29 @@ final class HmacTest extends DatabaseTestCase
         $resultsString = $this->stripRedColorCode(trim($this->io->getOutputs()));
 
         $this->assertSame('Unrecognized Command', $resultsString);
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testExpireAll(): void
+    {
+        $tokenExpiration = Time::parse('2024-11-03 12:00:00');
+
+        /** @var User $user */
+        $user = fake(UserModel::class);
+        $user->generateHmacToken('foo', ['*'], $tokenExpiration);
+        $user->generateHmacToken('bar');
+
+        $this->setMockIo([]);
+        $this->assertNotFalse(command('shield:hmac invalidateAll'));
+
+        $resultsString = $this->io->getOutputs();
+        $results       = explode("\n", trim($resultsString));
+
+        $this->assertCount(2, $results);
+        $this->assertSame('HMAC Token ID: 1, already expired, skipped.', trim($results[0]));
+        $this->assertSame('HMAC Token ID: 2, set as expired.', trim($results[1]));
     }
 
     /**

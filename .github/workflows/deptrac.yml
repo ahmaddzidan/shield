@@ -7,7 +7,7 @@ on:
     paths:
       - '**.php'
       - 'composer.*'
-      - 'depfile.yaml'
+      - 'deptrac.yaml'
       - '.github/workflows/deptrac.yml'
   push:
     branches:
@@ -15,9 +15,9 @@ on:
     paths:
       - '**.php'
       - 'composer.*'
-      - 'depfile.yaml'
+      - 'deptrac.yaml'
       - '.github/workflows/deptrac.yml'
 
 jobs:
   deptrac:
-    uses: codeigniter4/.github/.github/workflows/deptrac.yml@main
+    uses: codeigniter4/.github/.github/workflows/deptrac.yml@CI46

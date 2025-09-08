@@ -67,24 +67,28 @@ final class SetupTest extends TestCase
         $command->run([]);
 
         $auth = file_get_contents($appFolder . 'Config/Auth.php');
+        $this->assertIsString($auth);
         $this->assertStringContainsString('namespace Config;', $auth);
         $this->assertStringContainsString('use CodeIgniter\Shield\Config\Auth as ShieldAuth;', $auth);
 
         $authToken = file_get_contents($appFolder . 'Config/AuthToken.php');
+        $this->assertIsString($authToken);
         $this->assertStringContainsString('namespace Config;', $authToken);
         $this->assertStringContainsString('use CodeIgniter\Shield\Config\AuthToken as ShieldAuthToken;', $authToken);
 
         $autoload = file_get_contents($appFolder . 'Config/Autoload.php');
+        $this->assertIsString($autoload);
         $this->assertStringContainsString('$helpers = [\'auth\', \'setting\'];', $autoload);
 
         $routes = file_get_contents($appFolder . 'Config/Routes.php');
+        $this->assertIsString($routes);
         $this->assertStringContainsString('service(\'auth\')->routes($routes);', $routes);
 
         $security = file_get_contents($appFolder . 'Config/Security.php');
+        $this->assertIsString($security);
         $this->assertStringContainsString('$csrfProtection = \'session\';', $security);
 
         $result = $this->getOutputWithoutColorCode();
-
         $this->assertStringContainsString(
             '  Created: vfs://root/Config/Auth.php
   Created: vfs://root/Config/AuthGroups.php
@@ -93,11 +97,11 @@ final class SetupTest extends TestCase
   Updated: vfs://root/Config/Routes.php
   Updated: We have updated file \'vfs://root/Config/Security.php\' for security reasons.
   Updated: vfs://root/Config/Email.php',
-            $result
+            $result,
         );
         $this->assertStringContainsString(
             'Running all new migrations...',
-            $result
+            $result,
         );
     }
 
@@ -127,7 +131,7 @@ final class SetupTest extends TestCase
   Updated: vfs://root/Config/Autoload.php
   Updated: vfs://root/Config/Routes.php
   Updated: We have updated file \'vfs://root/Config/Security.php\' for security reasons.',
-            $result
+            $result,
         );
     }
 
@@ -135,7 +139,7 @@ final class SetupTest extends TestCase
     {
         $command = new Setup(Services::logger(), Services::commands());
 
-        $updateAutoloadHelpers = $this->getPrivateMethodInvoker($command, 'updateAutoloadHelpers');
+        $updateAutoloadHelpers = self::getPrivateMethodInvoker($command, 'updateAutoloadHelpers');
 
         $content = <<<'EOL'
             class Autoload extends AutoloadConfig
@@ -162,7 +166,7 @@ final class SetupTest extends TestCase
 
         $this->assertStringContainsString(
             "public \$helpers = ['text', 'form', 'auth', 'setting'];",
-            $output
+            $output,
         );
     }
 
@@ -174,7 +178,7 @@ final class SetupTest extends TestCase
         $root = vfsStream::setup('root');
         vfsStream::copyFromFileSystem(
             APPPATH,
-            $root
+            $root,
         );
 
         return $root->url() . '/';

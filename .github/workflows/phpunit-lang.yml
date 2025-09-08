@@ -9,6 +9,7 @@ on:
       - '!src/Language/en/**.php'
       - 'phpunit*'
       - '.github/workflows/phpunit-lang.yml'
+      - 'tests/Language/AbstractTranslationTestCase.php'
   push:
     branches:
       - develop
@@ -17,6 +18,7 @@ on:
       - '!src/Language/en/**.php'
       - 'phpunit*'
       - '.github/workflows/phpunit-lang.yml'
+      - 'tests/Language/AbstractTranslationTestCase.php'
 
 jobs:
   main:
@@ -26,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -57,7 +59,7 @@ jobs:
           fi
 
       - name: Test with PHPUnit
-        run: vendor/bin/phpunit --verbose --no-coverage --testsuite lang
+        run: vendor/bin/phpunit --no-coverage --testsuite lang
         env:
           TERM: xterm-256color
           TACHYCARDIA_MONITOR_GA: enabled

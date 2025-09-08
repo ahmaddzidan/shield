@@ -17,6 +17,7 @@ use CodeIgniter\Shield\Authentication\Passwords\NothingPersonalValidator;
 use CodeIgniter\Shield\Config\Auth;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Test\CIUnitTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @internal
@@ -29,8 +30,7 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
     {
         parent::setUp();
 
-        $config          = new Auth();
-        $this->validator = new NothingPersonalValidator($config);
+        $this->validator = new NothingPersonalValidator(new Auth());
     }
 
     public function testFalseOnPasswordIsEmail(): void
@@ -85,11 +85,8 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
     {
         $config                 = new Auth();
         $config->maxSimilarity  = 50;
-        $config->personalFields = [
-            'firstname',
-            'lastname',
-        ];
-        $this->validator = new NothingPersonalValidator($config);
+        $config->personalFields = ['firstname', 'lastname'];
+        $this->validator        = new NothingPersonalValidator($config);
 
         $user = new User([
             'email'     => 'jsmith@example.com',
@@ -109,11 +106,8 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
     {
         $config                 = new Auth();
         $config->maxSimilarity  = 50;
-        $config->personalFields = [
-            'firstname',
-            'lastname',
-        ];
-        $this->validator = new NothingPersonalValidator($config);
+        $config->personalFields = ['firstname', 'lastname'];
+        $this->validator        = new NothingPersonalValidator($config);
 
         $user = new User([
             'email'     => 'jsmith@example.com',
@@ -166,14 +160,11 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
      * rejected by isNotSimilar().
      *
      *  $config->maxSimilarity = 50; is the highest setting where all tests pass.
-     *
-     * @dataProvider provideIsNotPersonalFalsePositivesCaughtByIsNotSimilar
-     *
-     * @param mixed $password
      */
-    public function testIsNotPersonalFalsePositivesCaughtByIsNotSimilar($password): void
+    #[DataProvider('provideIsNotPersonalFalsePositivesCaughtByIsNotSimilar')]
+    public function testIsNotPersonalFalsePositivesCaughtByIsNotSimilar(string $password): void
     {
-        new User([
+        $user = new User([
             'username' => 'CaptainJoe',
             'email'    => 'JosephSmith@example.com',
         ]);
@@ -182,16 +173,19 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
         $config->maxSimilarity = 50;
         $this->validator       = new NothingPersonalValidator($config);
 
-        $isNotPersonal = $this->getPrivateMethodInvoker($this->validator, 'isNotPersonal');
+        $isNotPersonal = self::getPrivateMethodInvoker($this->validator, 'isNotPersonal');
 
-        $isNotSimilar = $this->getPrivateMethodInvoker($this->validator, 'isNotSimilar');
+        $isNotSimilar = self::getPrivateMethodInvoker($this->validator, 'isNotSimilar');
 
-        $this->assertNotSame($isNotPersonal, $isNotSimilar);
+        $this->assertNotSame($isNotPersonal($password, $user), $isNotSimilar($password, $user));
     }
 
+    /**
+     * @return iterable<int, array{0: string}>
+     */
     public static function provideIsNotPersonalFalsePositivesCaughtByIsNotSimilar(): iterable
     {
-        return [
+        yield from [
             ['JoeTheCaptain'],
             ['JoeCaptain'],
             ['CaptainJ'],
@@ -203,22 +197,13 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
         ];
     }
 
-    /**
-     * @dataProvider provideConfigPersonalFieldsValues
-     *
-     * @param mixed $firstName
-     * @param mixed $lastName
-     * @param mixed $expected
-     */
-    public function testConfigPersonalFieldsValues($firstName, $lastName, $expected): void
+    #[DataProvider('provideConfigPersonalFieldsValues')]
+    public function testConfigPersonalFieldsValues(string $firstName, string $lastName, bool $expected): void
     {
         $config                 = new Auth();
         $config->maxSimilarity  = 66;
-        $config->personalFields = [
-            'firstname',
-            'lastname',
-        ];
-        $this->validator = new NothingPersonalValidator($config);
+        $config->personalFields = ['firstname', 'lastname'];
+        $this->validator        = new NothingPersonalValidator($config);
 
         $user = new User([
             'username'  => 'Vlad the Impaler',
@@ -234,9 +219,12 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
         $this->assertSame($expected, $result->isOK());
     }
 
+    /**
+     * @return iterable<int, array{0: string, 1: string, 2: bool}>
+     */
     public static function provideConfigPersonalFieldsValues(): iterable
     {
-        return [
+        yield from [
             [
                 'Count',
                 '',
@@ -255,18 +243,8 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
         ];
     }
 
-    /**
-     * @dataProvider provideMaxSimilarityZeroTurnsOffSimilarityCalculation
-     *
-     * The calculated similarity of 'captnjoe' and 'CaptainJoe' is 88.89.
-     * With $config->maxSimilarity = 66; the password should be rejected,
-     * but using $config->maxSimilarity = 0; will turn off the calculation
-     * and accept the password.
-     *
-     * @param mixed $maxSimilarity
-     * @param mixed $expected
-     */
-    public function testMaxSimilarityZeroTurnsOffSimilarityCalculation($maxSimilarity, $expected): void
+    #[DataProvider('provideMaxSimilarityZeroTurnsOffSimilarityCalculation')]
+    public function testMaxSimilarityZeroTurnsOffSimilarityCalculation(int $maxSimilarity, bool $expected): void
     {
         $config                = new Auth();
         $config->maxSimilarity = $maxSimilarity;
@@ -284,6 +262,9 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
         $this->assertSame($expected, $result->isOK());
     }
 
+    /**
+     * @return iterable<int, array{0: int, 1: bool}>
+     */
     public static function provideMaxSimilarityZeroTurnsOffSimilarityCalculation(): iterable
     {
         return [
@@ -298,9 +279,7 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
         ];
     }
 
-    /**
-     * @dataProvider provideCheckPasswordWithBadEmail
-     */
+    #[DataProvider('provideCheckPasswordWithBadEmail')]
     public function testCheckPasswordWithBadEmail(string $email, bool $expected): void
     {
         $config          = new Auth();
@@ -318,6 +297,9 @@ final class NothingPersonalValidatorTest extends CIUnitTestCase
         $this->assertSame($expected, $result->isOK());
     }
 
+    /**
+     * @return iterable<int, array{0: string, 1: bool}>
+     */
     public static function provideCheckPasswordWithBadEmail(): iterable
     {
         return [

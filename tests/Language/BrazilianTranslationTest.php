@@ -20,5 +20,6 @@ final class BrazilianTranslationTest extends AbstractTranslationTestCase
 {
     protected array $excludedLocaleKeyTranslations = [
         'Auth.login',
+        'Auth.token',
     ];
 }

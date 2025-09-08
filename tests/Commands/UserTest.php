@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Tests\Commands;
 
 use CodeIgniter\Shield\Commands\User;
+use CodeIgniter\Shield\Config\AuthGroups;
 use CodeIgniter\Shield\Entities\User as UserEntity;
 use CodeIgniter\Shield\Models\UserModel;
 use CodeIgniter\Shield\Test\MockInputOutput;
@@ -65,7 +66,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'Specify a valid action: create,activate,deactivate,changename,changeemail,delete,password,list,addgroup,removegroup',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
     }
 
@@ -80,7 +81,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'User "user1" created',
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
 
         $users = model(UserModel::class);
@@ -93,6 +94,63 @@ final class UserTest extends DatabaseTestCase
             'id'     => $user->id,
             'active' => 0,
         ]);
+        $this->seeInDatabase($this->tables['groups_users'], [
+            'user_id' => $user->id,
+            'group'   => config(AuthGroups::class)->defaultGroup,
+        ]);
+    }
+
+    public function testCreateWithGroupBeta(): void
+    {
+        $this->setMockIo([
+            'Secret Passw0rd!',
+            'Secret Passw0rd!',
+        ]);
+
+        command('shield:user create -n user1 -e user1@example.com -g beta');
+
+        $this->assertStringContainsString(
+            'User "user1" created',
+            $this->io->getFirstOutput(),
+        );
+        $this->assertStringContainsString(
+            'The user is added to group "beta"',
+            $this->io->getFirstOutput(),
+        );
+
+        $users = model(UserModel::class);
+        $user  = $users->findByCredentials(['email' => 'user1@example.com']);
+        $this->seeInDatabase($this->tables['identities'], [
+            'user_id' => $user->id,
+            'secret'  => 'user1@example.com',
+        ]);
+        $this->seeInDatabase($this->tables['users'], [
+            'id'     => $user->id,
+            'active' => 0,
+        ]);
+        $this->seeInDatabase($this->tables['groups_users'], [
+            'user_id' => $user->id,
+            'group'   => 'beta',
+        ]);
+    }
+
+    public function testCreateWithInvalidGroup(): void
+    {
+        $this->setMockIo([
+            'Secret Passw0rd!',
+            'Secret Passw0rd!',
+        ]);
+
+        command('shield:user create -n user1 -e user1@example.com -g invalid');
+
+        $this->assertStringContainsString(
+            'Invalid group: "invalid"',
+            $this->io->getFirstOutput(),
+        );
+
+        $users = model(UserModel::class);
+        $user  = $users->findByCredentials(['email' => 'user1@example.com']);
+        $this->assertNull($user);
     }
 
     public function testCreateNotUniqueName(): void
@@ -112,11 +170,11 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'The Username field must contain a unique value.',
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
         $this->assertStringContainsString(
             'User creation aborted',
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
 
         $users = model(UserModel::class);
@@ -141,7 +199,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             "The passwords don't match",
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
 
         $users = model(UserModel::class);
@@ -182,7 +240,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'User "user2" activated',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $user = $users->findByCredentials(['email' => 'user2@example.com']);
@@ -206,7 +264,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'User "user3" deactivated',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
@@ -231,7 +289,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'Username "user4" changed to "newuser4"',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
@@ -256,11 +314,11 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'The Username field must be at least 3 characters in length.',
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
         $this->assertStringContainsString(
             'User name change aborted',
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
 
         $users = model(UserModel::class);
@@ -285,7 +343,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'Email for "user5" changed to newuser5@example.jp',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
@@ -310,11 +368,11 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'The Email Address field must contain a valid email address.',
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
         $this->assertStringContainsString(
             'User email change aborted',
-            $this->io->getFirstOutput()
+            $this->io->getFirstOutput(),
         );
 
         $users = model(UserModel::class);
@@ -336,7 +394,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'User "user6" deleted',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
@@ -358,7 +416,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'User "user6" deleted',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
@@ -380,7 +438,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             "User doesn't exist",
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
@@ -405,7 +463,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'Password for "user7" set',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $user = $users->findByCredentials(['email' => 'user7@example.com']);
@@ -431,7 +489,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'Password for "user7" set',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $user = $users->findByCredentials(['email' => 'user7@example.com']);
@@ -457,7 +515,7 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             "The passwords don't match",
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $user = $users->findByCredentials(['email' => 'user7@example.com']);
@@ -486,7 +544,7 @@ final class UserTest extends DatabaseTestCase
 1	user8 (user8@example.com)
 2	user9 (user9@example.com)
 ',
-            $this->getOutputWithoutColorCode()
+            $this->getOutputWithoutColorCode(),
         );
     }
 
@@ -511,7 +569,7 @@ final class UserTest extends DatabaseTestCase
             'Id	User
 2	user9 (user9@example.com)
 ',
-            $this->getOutputWithoutColorCode()
+            $this->getOutputWithoutColorCode(),
         );
     }
 
@@ -529,12 +587,31 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'User "user10" added to group "admin"',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
         $user  = $users->findByCredentials(['email' => 'user10@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
         $this->assertTrue($user->inGroup('admin'));
+    }
+
+    public function testAddgroupWithInvalidGroup(): void
+    {
+        $this->createUser([
+            'username' => 'user10',
+            'email'    => 'user10@example.com',
+            'password' => 'secret123',
+        ]);
+
+        $this->setMockIo(['y']);
+
+        command('shield:user addgroup -n user10 -g invalid');
+
+        $this->assertStringContainsString(
+            'Invalid group: "invalid"',
+            $this->io->getLastOutput(),
+        );
     }
 
     public function testAddgroupCancel(): void
@@ -551,11 +628,12 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'Addition of the user "user10" to the group "admin" cancelled',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
         $user  = $users->findByCredentials(['email' => 'user10@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
         $this->assertFalse($user->inGroup('admin'));
     }
 
@@ -568,6 +646,7 @@ final class UserTest extends DatabaseTestCase
         ]);
         $users = model(UserModel::class);
         $user  = $users->findByCredentials(['email' => 'user11@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
         $user->addGroup('admin');
         $this->assertTrue($user->inGroup('admin'));
 
@@ -577,12 +656,41 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'User "user11" removed from group "admin"',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
         $user  = $users->findByCredentials(['email' => 'user11@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
         $this->assertFalse($user->inGroup('admin'));
+    }
+
+    public function testRemovegroupWithInvalidGroup(): void
+    {
+        $this->createUser([
+            'username' => 'user11',
+            'email'    => 'user11@example.com',
+            'password' => 'secret123',
+        ]);
+        $users = model(UserModel::class);
+        $user  = $users->findByCredentials(['email' => 'user11@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
+        $user->addGroup('admin');
+        $this->assertTrue($user->inGroup('admin'));
+
+        $this->setMockIo(['y']);
+
+        command('shield:user removegroup -n user11 -g invalid');
+
+        $this->assertStringContainsString(
+            'Invalid group: "invalid"',
+            $this->io->getLastOutput(),
+        );
+
+        $users = model(UserModel::class);
+        $user  = $users->findByCredentials(['email' => 'user11@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
+        $this->assertTrue($user->inGroup('admin'));
     }
 
     public function testRemovegroupCancel(): void
@@ -594,6 +702,7 @@ final class UserTest extends DatabaseTestCase
         ]);
         $users = model(UserModel::class);
         $user  = $users->findByCredentials(['email' => 'user11@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
         $user->addGroup('admin');
         $this->assertTrue($user->inGroup('admin'));
 
@@ -603,11 +712,12 @@ final class UserTest extends DatabaseTestCase
 
         $this->assertStringContainsString(
             'Removal of the user "user11" from the group "admin" cancelled',
-            $this->io->getLastOutput()
+            $this->io->getLastOutput(),
         );
 
         $users = model(UserModel::class);
         $user  = $users->findByCredentials(['email' => 'user11@example.com']);
+        $this->assertInstanceOf(UserEntity::class, $user);
         $this->assertTrue($user->inGroup('admin'));
     }
 }

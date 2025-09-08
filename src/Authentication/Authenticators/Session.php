@@ -57,11 +57,6 @@ class Session implements AuthenticatorInterface
     private const STATE_LOGGED_IN = 3;
 
     /**
-     * The persistence engine
-     */
-    protected UserModel $provider;
-
-    /**
      * Authenticated or authenticating (pending login) User
      */
     protected ?User $user = null;
@@ -80,10 +75,12 @@ class Session implements AuthenticatorInterface
     protected RememberModel $rememberModel;
     protected UserIdentityModel $userIdentityModel;
 
-    public function __construct(UserModel $provider)
-    {
-        $this->provider = $provider;
-
+    /**
+     * @param UserModel $provider The persistence engine
+     */
+    public function __construct(
+        protected UserModel $provider,
+    ) {
         $this->loginModel        = model(LoginModel::class);
         $this->rememberModel     = model(RememberModel::class);
         $this->userIdentityModel = model(UserIdentityModel::class);
@@ -103,7 +100,7 @@ class Session implements AuthenticatorInterface
             throw new SecurityException(
                 'Config\Security::$csrfProtection is set to \'cookie\'.'
                     . ' Same-site attackers may bypass the CSRF protection.'
-                    . ' Please set it to \'session\'.'
+                    . ' Please set it to \'session\'.',
             );
         }
     }
@@ -279,7 +276,7 @@ class Session implements AuthenticatorInterface
         bool $success,
         string $ipAddress,
         string $userAgent,
-        $userId = null
+        $userId = null,
     ): void {
         // Determine the type of ID we're using.
         // Standard fields would be email, username,
@@ -306,7 +303,7 @@ class Session implements AuthenticatorInterface
             $success,
             $ipAddress,
             $userAgent,
-            $userId
+            $userId,
         );
     }
 
@@ -511,7 +508,7 @@ class Session implements AuthenticatorInterface
     {
         return $this->userIdentityModel->getIdentitiesByTypes(
             $user,
-            $this->getActionTypes()
+            $this->getActionTypes(),
         );
     }
 
@@ -657,7 +654,7 @@ class Session implements AuthenticatorInterface
                     . ' If a logged in user logs in again with other account, the session data of the previous'
                     . ' user will be used as the new user.'
                     . ' Fix your code to prevent users from logging in without logging out or delete the session data.'
-                    . ' user_id: ' . $userId
+                    . ' user_id: ' . $userId,
             );
         }
 
@@ -744,7 +741,7 @@ class Session implements AuthenticatorInterface
                 'The user has identities for action, so cannot complete login.'
                     . ' If you want to start to login with auth action, use startLogin() instead.'
                     . ' Or delete identities for action in database.'
-                    . ' user_id: ' . $user->id
+                    . ' user_id: ' . $user->id,
             );
         }
         // Check auth_action in Session
@@ -753,7 +750,7 @@ class Session implements AuthenticatorInterface
                 'The user has auth action in session, so cannot complete login.'
                     . ' If you want to start to login with auth action, use startLogin() instead.'
                     . ' Or delete `auth_action` and `auth_action_message` in session data.'
-                    . ' user_id: ' . $user->id
+                    . ' user_id: ' . $user->id,
             );
         }
 
@@ -795,7 +792,7 @@ class Session implements AuthenticatorInterface
             setting('Auth.sessionConfig')['rememberCookieName'],
             setting('Cookie.domain'),
             setting('Cookie.path'),
-            setting('Cookie.prefix')
+            setting('Cookie.prefix'),
         );
     }
 
@@ -831,10 +828,9 @@ class Session implements AuthenticatorInterface
         /** @var \CodeIgniter\Session\Session $session */
         $session     = session();
         $sessionData = $session->get();
-        if (isset($sessionData)) {
-            foreach (array_keys($sessionData) as $key) {
-                $session->remove($key);
-            }
+
+        foreach (array_keys($sessionData) as $key) {
+            $session->remove($key);
         }
 
         // Regenerate the session ID for a touch of added safety.
@@ -898,7 +894,7 @@ class Session implements AuthenticatorInterface
     {
         if (! $this->user instanceof User) {
             throw new InvalidArgumentException(
-                __METHOD__ . '() requires logged in user before calling.'
+                __METHOD__ . '() requires logged in user before calling.',
             );
         }
 
@@ -926,7 +922,7 @@ class Session implements AuthenticatorInterface
             $user,
             $selector,
             $this->hashValidator($validator),
-            $expires->format('Y-m-d H:i:s')
+            $expires->format('Y-m-d H:i:s'),
         );
 
         $this->setRememberMeCookie($rawToken);
@@ -934,9 +930,9 @@ class Session implements AuthenticatorInterface
 
     private function calcExpires(): Time
     {
-        $timestamp = Time::now()->getTimestamp() + setting('Auth.sessionConfig')['rememberLength'];
+        $rememberLength = setting('Auth.sessionConfig')['rememberLength'];
 
-        return Time::createFromTimestamp($timestamp);
+        return Time::now()->addSeconds($rememberLength);
     }
 
     /**
@@ -957,7 +953,7 @@ class Session implements AuthenticatorInterface
             setting('Cookie.path'),
             setting('Cookie.prefix'),
             setting('Cookie.secure'),                          // Only send over HTTPS?
-            true                                                  // Hide from Javascript?
+            true,                                                  // Hide from Javascript?
         );
     }
 

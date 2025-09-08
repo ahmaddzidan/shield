@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Authentication;
 
+use CodeIgniter\I18n\Time;
 use CodeIgniter\Shield\Entities\AccessToken;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserIdentityModel;
@@ -32,6 +33,14 @@ final class HasAccessTokensTest extends DatabaseTestCase
 
         $this->user = fake(UserModel::class);
         $this->db->table($this->tables['identities'])->truncate();
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        // Reset the current time.
+        Time::setTestNow();
     }
 
     public function testGenerateToken(): void
@@ -59,11 +68,11 @@ final class HasAccessTokensTest extends DatabaseTestCase
         // Give the user a couple of access tokens
         $token1 = fake(
             UserIdentityModel::class,
-            ['user_id' => $this->user->id, 'type' => 'access_token', 'secret' => 'secretToken1']
+            ['user_id' => $this->user->id, 'type' => 'access_token', 'secret' => 'secretToken1'],
         );
         $token2 = fake(
             UserIdentityModel::class,
-            ['user_id' => $this->user->id, 'type' => 'access_token', 'secret' => 'secretToken2']
+            ['user_id' => $this->user->id, 'type' => 'access_token', 'secret' => 'secretToken2'],
         );
 
         /** @var list<AccessToken> $tokens */
@@ -140,11 +149,11 @@ final class HasAccessTokensTest extends DatabaseTestCase
 
     public function testTokenCanBasics(): void
     {
-        $token = $this->user->generateAccessToken('foo', ['foo:bar']);
+        $token = $this->user->generateAccessToken('foo', ['foo.bar']);
         $this->user->setAccessToken($token);
 
-        $this->assertTrue($this->user->tokenCan('foo:bar'));
-        $this->assertFalse($this->user->tokenCan('foo:baz'));
+        $this->assertTrue($this->user->tokenCan('foo.bar'));
+        $this->assertFalse($this->user->tokenCan('foo.baz'));
     }
 
     public function testTokenCantNoTokenSet(): void
@@ -152,12 +161,99 @@ final class HasAccessTokensTest extends DatabaseTestCase
         $this->assertTrue($this->user->tokenCant('foo'));
     }
 
-    public function testTokenCant(): void
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testGenerateTokenWithExpiration(): void
     {
-        $token = $this->user->generateAccessToken('foo', ['foo:bar']);
+        $tokenExpiration = Time::parse('2024-11-03 12:00:00');
+        $token           = $this->user->generateAccessToken('foo', ['foo.bar'], $tokenExpiration);
         $this->user->setAccessToken($token);
 
-        $this->assertFalse($this->user->tokenCant('foo:bar'));
-        $this->assertTrue($this->user->tokenCant('foo:baz'));
+        $this->assertSame($tokenExpiration->format('Y-m-d h:i:s'), $this->user->currentAccessToken()->expires->format('Y-m-d h:i:s'));
+
+        $tokenExpiration = $tokenExpiration->addMonths(1)->addYears(1);
+        $token           = $this->user->generateAccessToken('foo', ['foo.bar'], $tokenExpiration);
+        $this->user->setAccessToken($token);
+
+        $this->assertSame($tokenExpiration->format('Y-m-d h:i:s'), $this->user->currentAccessToken()->expires->format('Y-m-d h:i:s'));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testSetTokenExpirationById(): void
+    {
+        $token = $this->user->generateAccessToken('foo', ['foo.bar']);
+
+        $this->user->setAccessToken($token);
+
+        $this->assertNull($this->user->currentAccessToken()->expires);
+
+        $tokenExpiration = Time::parse('2024-11-03 12:00:00');
+
+        $this->assertTrue($this->user->updateAccessTokenExpiration($token->id, $tokenExpiration));
+        $this->assertSame($tokenExpiration->format('Y-m-d h:i:s'), $this->user->currentAccessToken()->expires->format('Y-m-d h:i:s'));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testIsTokenExpired(): void
+    {
+        $tokenExpiration = Time::parse('2024-11-03 12:00:00');
+        $token           = $this->user->generateAccessToken('foo', ['foo.bar'], $tokenExpiration);
+        $this->user->setAccessToken($token);
+
+        $this->assertTrue($this->user->isAccessTokenExpired($this->user->currentAccessToken()));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testTokenTimeToExpired(): void
+    {
+        Time::setTestNow('2025-07-16 12:00:00');
+
+        $tokenExpiration = Time::now()->addYears(1);
+
+        $token = $this->user->generateAccessToken('foo', ['foo.bar'], $tokenExpiration);
+        $this->user->setAccessToken($token);
+
+        $this->assertSame('in 1 year', $this->user->currentAccessToken()->expires->humanize());
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testCanHmacTokenExpire(): void
+    {
+        $tokenExpiration = Time::now()->addYears(1);
+
+        $token = $this->user->generateAccessToken('foo', ['foo.bar'], $tokenExpiration);
+
+        $this->assertTrue($this->user->canAccessTokenExpire($token));
+
+        $token = $this->user->generateAccessToken('foo', ['foo.bar']);
+
+        $this->assertFalse($this->user->canAccessTokenExpire($token));
+    }
+
+    /**
+     * See https://github.com/codeigniter4/shield/issues/926
+     */
+    public function testAccessTokenRemoveExpiration(): void
+    {
+        $tokenExpiration = Time::now()->addYears(1);
+
+        $token = $this->user->generateAccessToken('foo', ['foo.bar'], $tokenExpiration);
+
+        $this->user->setAccessToken($token);
+
+        $this->assertTrue($this->user->canAccessTokenExpire($token));
+
+        $this->assertTrue($this->user->removeAccessTokenExpiration($token->id));
+
+        $this->assertFalse($this->user->canAccessTokenExpire($this->user->currentAccessToken()));
     }
 }

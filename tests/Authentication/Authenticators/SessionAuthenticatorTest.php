@@ -36,8 +36,6 @@ final class SessionAuthenticatorTest extends DatabaseTestCase
     use FakeUser;
 
     private Session $auth;
-    protected $namespace;
-    private MockEvents $events;
 
     protected function setUp(): void
     {
@@ -51,8 +49,8 @@ final class SessionAuthenticatorTest extends DatabaseTestCase
         $authenticator = $auth->factory('session');
         $this->auth    = $authenticator;
 
-        $this->events = new MockEvents();
-        Services::injectMock('events', $this->events);
+        $events = new MockEvents();
+        Services::injectMock('events', $events);
 
         $this->db->table($this->tables['identities'])->truncate();
     }
@@ -366,7 +364,7 @@ final class SessionAuthenticatorTest extends DatabaseTestCase
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage(
-            'The user has User Info in Session, so already logged in or in pending login state.'
+            'The user has User Info in Session, so already logged in or in pending login state.',
         );
 
         $this->user->createEmailIdentity([
