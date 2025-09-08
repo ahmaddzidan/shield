@@ -19,6 +19,7 @@ use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Entities\UserIdentity;
 use CodeIgniter\Shield\Exceptions\InvalidArgumentException;
+use CodeIgniter\Shield\Exceptions\LogicException;
 use CodeIgniter\Shield\Exceptions\ValidationException;
 use Faker\Generator;
 
@@ -491,7 +492,7 @@ class UserModel extends BaseModel
         // Insert
         if ($this->tempUser->id === null) {
             /** @var User $user */
-            $user = $this->find($this->db->insertID());
+            $user = $this->find($this->getLastId());
 
             // If you get identity (email/password), the User object must have the id.
             $this->tempUser->id = $user->id;
