@@ -67,7 +67,7 @@ class User extends Entity
      * @var array<string, string>
      */
     protected $casts = [
-        'id'          => '?integer',
+        'id'          => '?string',
         'active'      => 'int-bool',
         'permissions' => 'array',
         'groups'      => 'array',
