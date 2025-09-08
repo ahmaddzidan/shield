@@ -25,9 +25,9 @@ abstract class BaseModel extends Model
      * Auth Table names
      */
     protected array $tables;
-    protected $useAutoIncrement = false;
-    protected $beforeInsert = ['setPrimaryKey'];
 
+    protected $useAutoIncrement = false;
+    protected $beforeInsert     = ['setPrimaryKey'];
     protected Auth $authConfig;
 
     public function __construct()
@@ -51,12 +51,11 @@ abstract class BaseModel extends Model
         $newUuid = Uuid::uuid4()->toString();
 
         if (is_object($data)) {
-            if ($data->data->{$this->primaryKey} == '')
-            {
-                $data->data->{$this->primaryKey} == $newUuid;
+            if ($data->data->{$this->primaryKey} === '') {
+                $data->data->{$this->primaryKey} === $newUuid;
             }
         } else {
-            if ($this->useAutoIncrement == false && !isset($data['data'][$this->primaryKey])) {
+            if ($this->useAutoIncrement === false && ! isset($data['data'][$this->primaryKey])) {
                 $data['data'][$this->primaryKey] = $newUuid;
             }
         }
